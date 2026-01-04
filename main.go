@@ -1,46 +1,46 @@
 package main
 
 import (
+	"context"
 	_ "embed"
 	"log"
+	"os"
 
-	"github.com/gen2brain/beeep"
-	"github.com/getlantern/systray"
+	"github.com/google/go-github/v62/github"
+	"github.com/joho/godotenv"
+
 	"github.com/westleaf/workflow-tracker/internal/config"
+	"github.com/westleaf/workflow-tracker/internal/runtime"
+	"github.com/westleaf/workflow-tracker/internal/tracker"
 )
 
 func main() {
-	config := newConfig()
+	godotenv.Load()
 
-	systray.Run(onReady, onExit)
-	watchWorkflows(config)
-}
-
-func onReady() {
-	systray.SetTitle("Workflow notifier")
-	systray.SetTooltip("din din dan")
-
-	// Show startup notification
-	beeep.AppName = "Workflow notifier"
-	if err := beeep.Notify("Setup!", "Watching workflows", ""); err != nil {
-		log.Println("Notification error:", err)
+	conf, err := config.ReadConfig()
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	// Add menu items
-	mQuit := systray.AddMenuItem("Quit", "Quit the whole app")
+	ghclient := github.NewTokenClient(context.Background(), os.Getenv("GH_TOKEN"))
 
-	go func() {
-		<-mQuit.ClickedCh
-		systray.Quit()
-	}()
+	prState, err := config.ReadState()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-}
+	st := runtime.State{
+		Config:  &conf,
+		Client:  ghclient,
+		PRState: &prState,
+	}
 
-func onExit() {
-	// Cleanup code goes here (close connections, save state, etc.)
-	log.Println("Exiting...")
-}
+	tracker := tracker.NewTracker(&st)
 
-func checkWorkflows(c *config.Config) error {
-	return nil
+	runSystray()
+
+	err = tracker.Start("10s")
+	if err != nil {
+		log.Fatal(err)
+	}
 }

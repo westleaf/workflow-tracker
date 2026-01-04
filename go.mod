@@ -3,11 +3,10 @@ module github.com/westleaf/workflow-tracker
 go 1.25.4
 
 require (
-	github.com/bartventer/httpcache v0.12.0
 	github.com/gen2brain/beeep v0.11.1
 	github.com/getlantern/systray v1.2.2
-	github.com/google/go-github v17.0.0+incompatible
-	golang.org/x/oauth2 v0.34.0
+	github.com/google/go-github/v62 v62.0.0
+	github.com/joho/godotenv v1.5.1
 )
 
 require (
