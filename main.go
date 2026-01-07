@@ -39,7 +39,7 @@ func main() {
 
 	runSystray()
 
-	err = tracker.Start("10s")
+	err = tracker.Start("2m")
 	if err != nil {
 		log.Fatal(err)
 	}
