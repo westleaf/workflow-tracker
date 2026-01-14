@@ -5,7 +5,8 @@ go 1.25.4
 require (
 	github.com/gen2brain/beeep v0.11.1
 	github.com/getlantern/systray v1.2.2
-	github.com/google/go-github/v62 v62.0.0
+	github.com/go-toast/toast v0.0.0-20190211030409-01e6764cf0a4
+	github.com/google/go-github/v81 v81.0.0
 	github.com/joho/godotenv v1.5.1
 )
 
@@ -24,6 +25,7 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/jackmordaunt/icns/v3 v3.0.1 // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
+	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c // indirect
 	github.com/sergeymakinen/go-bmp v1.0.0 // indirect
 	github.com/sergeymakinen/go-ico v1.0.0-beta.0 // indirect

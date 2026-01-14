@@ -10,7 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/go-github/v62/github"
+	"github.com/gen2brain/beeep"
+	"github.com/google/go-github/v81/github"
+	"github.com/westleaf/workflow-tracker/assets"
 	"github.com/westleaf/workflow-tracker/internal/config"
 	"github.com/westleaf/workflow-tracker/internal/runtime"
 )
@@ -88,7 +90,7 @@ func (t *Tracker) checkPRs(ctx context.Context) error {
 			return update.err
 		}
 		if update.modified {
-			fmt.Printf("PR %s updated. New head SHA: %s\n", update.key, update.state.HeadSHA)
+			log.Printf("PR %s updated. New head SHA: %s\n", update.key, update.state.HeadSHA)
 			t.state.PRState.PRs[update.key] = update.state
 		}
 	}
@@ -102,7 +104,9 @@ func (t *Tracker) checkPRs(ctx context.Context) error {
 }
 
 func (t *Tracker) fetchPRDetails(ctx context.Context, owner, repo string, number int) (prUpdate, error) {
-	prState := t.state.PRState.PRs[key(owner, repo, number)]
+	key := key(owner, repo, number)
+	oldState := t.state.PRState.PRs[key]
+	prState := oldState
 
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls/%d", owner, repo, number)
 
@@ -111,8 +115,8 @@ func (t *Tracker) fetchPRDetails(ctx context.Context, owner, repo string, number
 		return prUpdate{}, err
 	}
 
-	if prState.Etag != "" {
-		req.Header.Set("If-None-Match", prState.Etag)
+	if oldState.Etag != "" {
+		req.Header.Set("If-None-Match", oldState.Etag)
 	}
 
 	httpClient := t.state.Client.Client()
@@ -128,14 +132,27 @@ func (t *Tracker) fetchPRDetails(ctx context.Context, owner, repo string, number
 		}
 	}()
 
-	// pr, resp, err := t.state.Client.PullRequests.Get(ctx, owner, repo, number)
-	// if err != nil {
 	if resp != nil && resp.StatusCode == http.StatusNotModified {
-		log.Printf("no change on pr %s", url)
+		if oldState.HeadSHA != "" {
+			workflowRun, err := t.getWorkflowStatus(ctx, owner, repo, oldState.HeadSHA)
+			if err != nil {
+				return prUpdate{}, err
+			}
+
+			if workflowRun.GetID() != 0 {
+				prState.WorkflowStatus = workflowRun.GetStatus()
+				prState.WorkflowConclusion = workflowRun.GetConclusion()
+				prState.WorkflowRunID = int(workflowRun.GetID())
+			}
+
+			checkShouldNotify(oldState, prState)
+
+			if oldState.WorkflowStatus != prState.WorkflowStatus {
+				return prUpdate{key: key, state: prState, modified: true}, nil
+			}
+		}
 		return prUpdate{modified: false}, nil
 	}
-	// return prUpdate{}, err
-	// }
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -147,44 +164,73 @@ func (t *Tracker) fetchPRDetails(ctx context.Context, owner, repo string, number
 		return prUpdate{}, err
 	}
 
+	newHeadSha := pr.GetHead().GetSHA()
+
+	if oldState.HeadSHA != "" && oldState.HeadSHA != newHeadSha {
+		prState.WorkflowStatus = "pending"
+		prState.WorkflowRunID = 0
+		oldState.WorkflowStatus = "pending"
+		log.Printf("new commit on PR %s: %s -> %s", key, oldState.HeadSHA, newHeadSha)
+	}
+
+	workflowRun, err := t.getWorkflowStatus(ctx, owner, repo, newHeadSha)
+	if err != nil {
+		return prUpdate{}, err
+	}
+
+	if workflowRun.GetID() != 0 {
+		prState.WorkflowStatus = workflowRun.GetStatus()
+		prState.WorkflowRunID = int(workflowRun.GetID())
+		prState.WorkflowConclusion = workflowRun.GetConclusion()
+	} else {
+		prState.WorkflowStatus = "not_found"
+	}
+
+	checkShouldNotify(oldState, prState)
+
 	prState.Number = number
 	prState.Repo = repo
 	prState.HeadSHA = pr.GetHead().GetSHA()
 	prState.Etag = resp.Header.Get("ETag")
 	prState.UpdatedAt = time.Now()
 
-	t.state.PRState.PRs[key(owner, repo, number)] = prState
-
-	status, conclusion, err := t.getWorkflowStatus(ctx, owner, repo, prState.HeadSHA)
-	if err != nil {
-		return prUpdate{}, err
-	}
-
-	log.Printf("%s, %s", status, conclusion)
-
 	return prUpdate{
-		key:      key(owner, repo, number),
+		key:      key,
 		state:    prState,
 		modified: true,
 		err:      nil,
 	}, nil
 }
 
-func (t *Tracker) getWorkflowStatus(ctx context.Context, owner, repo, headSHA string) (status, conclusion string, err error) {
+func checkShouldNotify(oldState, newState config.PRState) {
+	if oldState.WorkflowStatus != "completed" && newState.WorkflowStatus == "completed" {
+		if newState.WorkflowConclusion == "success" || newState.WorkflowConclusion == "failure" {
+			title := fmt.Sprintf("Pr #%d Workflow Complete", newState.Number)
+			message := fmt.Sprintf("%s - %s", newState.Repo, newState.WorkflowConclusion)
+			if newState.WorkflowConclusion == "success" {
+				_ = beeep.Notify(title, message, assets.SuccessIcon())
+			} else {
+				_ = beeep.Notify(title, message, assets.FailIcon())
+			}
+		}
+	}
+}
+
+func (t *Tracker) getWorkflowStatus(ctx context.Context, owner, repo, sha string) (workflowRun github.WorkflowRun, err error) {
 	opts := &github.ListWorkflowRunsOptions{
-		HeadSHA: headSHA,
+		HeadSHA: sha,
 	}
 
 	runs, _, err := t.state.Client.Actions.ListRepositoryWorkflowRuns(ctx, owner, repo, opts)
 	if err != nil {
-		return "", "", err
+		return github.WorkflowRun{}, err
 	}
 
 	if len(runs.WorkflowRuns) == 0 {
-		log.Printf("no workflow runs found for sha %s", headSHA)
-		return
+		return github.WorkflowRun{}, nil
 	}
-	return *runs.WorkflowRuns[0].Status, "", nil
+
+	return *runs.WorkflowRuns[0], nil
 }
 
 func key(owner, repo string, number int) string {

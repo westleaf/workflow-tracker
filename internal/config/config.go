@@ -24,13 +24,17 @@ type State struct {
 }
 
 type PRState struct {
-	Number    int       `json:"number"`
-	Repo      string    `json:"repo"`
-	HeadSHA   string    `json:"head_sha"`
-	Status    string    `json:"status"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Etag      string    `json:"etag,omitempty"`
-	Ignored   bool      `json:"ignored,omitempty"`
+	Number             int       `json:"number"`
+	Repo               string    `json:"repo"`
+	HeadSHA            string    `json:"head_sha"`
+	UpdatedAt          time.Time `json:"updated_at"`
+	Etag               string    `json:"etag,omitempty"`
+	Ignored            bool      `json:"ignored,omitempty"`
+	WorkflowStatus     string    `json:"workflow_status"`
+	WorkflowConclusion string    `json:"workflow_conclusion"`
+	WorkflowRunID      int       `json:"workflow_run_id"`
+	WorkflowURL        string    `json:"workflow_url"`
+	LastCheckedSHA     string    `json:"last_checked_sha"`
 }
 
 func ReadConfig() (Config, error) {

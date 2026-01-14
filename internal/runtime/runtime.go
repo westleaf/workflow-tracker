@@ -1,7 +1,7 @@
 package runtime
 
 import (
-	"github.com/google/go-github/v62/github"
+	"github.com/google/go-github/v81/github"
 	"github.com/westleaf/workflow-tracker/internal/config"
 )
 

@@ -2,13 +2,14 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/gen2brain/beeep"
 	"github.com/getlantern/systray"
 )
 
 func runSystray() {
-	go systray.Run(onReady, onExit)
+	systray.Run(onReady, onExit)
 }
 
 func onReady() {
@@ -33,4 +34,5 @@ func onReady() {
 
 func onExit() {
 	log.Println("Exiting...")
+	os.Exit(0)
 }

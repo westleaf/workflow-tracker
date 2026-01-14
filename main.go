@@ -1,12 +1,11 @@
 package main
 
 import (
-	"context"
 	_ "embed"
 	"log"
 	"os"
 
-	"github.com/google/go-github/v62/github"
+	"github.com/google/go-github/v81/github"
 	"github.com/joho/godotenv"
 
 	"github.com/westleaf/workflow-tracker/internal/config"
@@ -22,7 +21,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ghclient := github.NewTokenClient(context.Background(), os.Getenv("GH_TOKEN"))
+	ghclient := github.NewClient(nil).WithAuthToken(os.Getenv("GH_TOKEN"))
 
 	prState, err := config.ReadState()
 	if err != nil {
@@ -37,10 +36,12 @@ func main() {
 
 	tracker := tracker.NewTracker(&st)
 
-	runSystray()
+	go func() {
+		err = tracker.Start("2m")
+		if err != nil {
+			log.Printf("tracker error: %v", err)
+		}
+	}()
 
-	err = tracker.Start("2m")
-	if err != nil {
-		log.Fatal(err)
-	}
+	runSystray()
 }
