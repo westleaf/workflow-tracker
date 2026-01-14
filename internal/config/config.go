@@ -37,6 +37,54 @@ type PRState struct {
 	LastCheckedSHA     string    `json:"last_checked_sha"`
 }
 
+func EnsureConfigExists() error {
+	path, err := getConfigFilePath()
+	if err != nil {
+		return err
+	}
+
+	if _, err := os.Stat(path); err == nil {
+		return nil
+	}
+
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+
+	defaultConfig := Config{CurrentUser: ""}
+	b, err := json.Marshal(defaultConfig)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(path, b, 0644)
+}
+
+func EnsureStateExists() error {
+	path, err := getStateFilePath()
+	if err != nil {
+		return err
+	}
+
+	if _, err := os.Stat(path); err == nil {
+		return nil
+	}
+
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+
+	defaultState := State{PRs: make(map[string]PRState)}
+	b, err := json.Marshal(defaultState)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(path, b, 0600)
+}
+
 func ReadConfig() (Config, error) {
 	path, err := getConfigFilePath()
 	if err != nil {

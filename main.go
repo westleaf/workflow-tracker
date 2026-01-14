@@ -16,6 +16,14 @@ import (
 func main() {
 	godotenv.Load()
 
+	if err := config.EnsureConfigExists(); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := config.EnsureStateExists(); err != nil {
+		log.Fatal(err)
+	}
+
 	conf, err := config.ReadConfig()
 	if err != nil {
 		log.Fatal(err)
