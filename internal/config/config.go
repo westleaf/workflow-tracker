@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -136,7 +135,27 @@ func (cfg *Config) WriteConfig() error {
 }
 
 func SetUser(user string) error {
-	return nil
+	path, err := getConfigFilePath()
+	if err != nil {
+		return err
+	}
+
+	if _, err := os.Stat(path); err == nil {
+		return nil
+	}
+
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+
+	defaultConfig := Config{CurrentUser: user}
+	b, err := json.Marshal(defaultConfig)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(path, b, 0644)
 }
 
 func getConfigFilePath() (string, error) {
@@ -145,7 +164,7 @@ func getConfigFilePath() (string, error) {
 }
 
 func getStateFilePath() (string, error) {
-	path := fmt.Sprintf("%s/%s/%s", getHomeDir(), appFolderName, stateFileName)
+	path := filepath.Join(getHomeDir(), appFolderName, stateFileName)
 	return path, nil
 }
 

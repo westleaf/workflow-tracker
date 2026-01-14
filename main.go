@@ -1,13 +1,14 @@
 package main
 
 import (
+	"context"
 	_ "embed"
 	"log"
-	"os"
 
 	"github.com/google/go-github/v81/github"
 	"github.com/joho/godotenv"
 
+	"github.com/westleaf/workflow-tracker/internal/auth"
 	"github.com/westleaf/workflow-tracker/internal/config"
 	"github.com/westleaf/workflow-tracker/internal/runtime"
 	"github.com/westleaf/workflow-tracker/internal/tracker"
@@ -24,12 +25,28 @@ func main() {
 		log.Fatal(err)
 	}
 
+	token, err := auth.AuthHandler()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	conf, err := config.ReadConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	ghclient := github.NewClient(nil).WithAuthToken(os.Getenv("GH_TOKEN"))
+	ghclient := github.NewClient(nil).WithAuthToken(token.Token)
+	user, _, err := ghclient.Users.Get(context.Background(), "")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	config.SetUser(user.GetName())
+
+	// conf, err := config.ReadConfig()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
 	prState, err := config.ReadState()
 	if err != nil {
