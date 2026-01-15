@@ -16,6 +16,7 @@ const stateFileName = "state.json"
 
 type Config struct {
 	CurrentUser string `json:"current_user"`
+	Token       string `json:"token"`
 }
 
 type State struct {
@@ -51,7 +52,10 @@ func EnsureConfigExists() error {
 		return err
 	}
 
-	defaultConfig := Config{CurrentUser: ""}
+	defaultConfig := Config{
+		CurrentUser: "",
+		Token:       "",
+	}
 	b, err := json.Marshal(defaultConfig)
 	if err != nil {
 		return err
@@ -131,31 +135,50 @@ func (cfg *Config) WriteConfig() error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
-func SetUser(user string) error {
+func (cfg *Config) SetUser(user string) error {
 	path, err := getConfigFilePath()
 	if err != nil {
 		return err
 	}
 
-	if _, err := os.Stat(path); err == nil {
-		return nil
-	}
+	cfg.CurrentUser = user
 
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
-	}
-
-	defaultConfig := Config{CurrentUser: user}
-	b, err := json.Marshal(defaultConfig)
+	b, err := json.Marshal(cfg)
 	if err != nil {
 		return err
 	}
 
-	return os.WriteFile(path, b, 0644)
+	err = os.WriteFile(path, b, 0644)
+	if err != nil {
+		return err
+	}
+	log.Println("wrote user to config")
+	return nil
+}
+
+func (cfg *Config) SetToken(token string) error {
+	path, err := getConfigFilePath()
+	if err != nil {
+		return err
+	}
+
+	cfg.Token = token
+
+	b, err := json.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(path, b, 0644)
+	if err != nil {
+		return err
+	}
+	log.Println("wrote token to config")
+	return nil
 }
 
 func getConfigFilePath() (string, error) {

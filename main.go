@@ -25,28 +25,30 @@ func main() {
 		log.Fatal(err)
 	}
 
-	token, err := auth.AuthHandler()
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	conf, err := config.ReadConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	ghclient := github.NewClient(nil).WithAuthToken(token.Token)
+	if conf.Token == "" {
+		token, err := auth.AuthHandler()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		conf.SetToken(token.Token)
+	}
+
+	ghclient := github.NewClient(nil).WithAuthToken(conf.Token)
+
 	user, _, err := ghclient.Users.Get(context.Background(), "")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	config.SetUser(user.GetName())
-
-	// conf, err := config.ReadConfig()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	if conf.CurrentUser == "" {
+		conf.SetUser(user.GetName())
+	}
 
 	prState, err := config.ReadState()
 	if err != nil {
