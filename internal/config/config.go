@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -17,6 +16,7 @@ const stateFileName = "state.json"
 
 type Config struct {
 	CurrentUser string `json:"current_user"`
+	Token       string `json:"token"`
 }
 
 type State struct {
@@ -52,7 +52,10 @@ func EnsureConfigExists() error {
 		return err
 	}
 
-	defaultConfig := Config{CurrentUser: ""}
+	defaultConfig := Config{
+		CurrentUser: "",
+		Token:       "",
+	}
 	b, err := json.Marshal(defaultConfig)
 	if err != nil {
 		return err
@@ -132,10 +135,49 @@ func (cfg *Config) WriteConfig() error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
-func SetUser(user string) error {
+func (cfg *Config) SetUser(user string) error {
+	path, err := getConfigFilePath()
+	if err != nil {
+		return err
+	}
+
+	cfg.CurrentUser = user
+
+	b, err := json.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(path, b, 0644)
+	if err != nil {
+		return err
+	}
+	log.Println("wrote user to config")
+	return nil
+}
+
+func (cfg *Config) SetToken(token string) error {
+	path, err := getConfigFilePath()
+	if err != nil {
+		return err
+	}
+
+	cfg.Token = token
+
+	b, err := json.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(path, b, 0644)
+	if err != nil {
+		return err
+	}
+	log.Println("wrote token to config")
 	return nil
 }
 
@@ -145,7 +187,7 @@ func getConfigFilePath() (string, error) {
 }
 
 func getStateFilePath() (string, error) {
-	path := fmt.Sprintf("%s/%s/%s", getHomeDir(), appFolderName, stateFileName)
+	path := filepath.Join(getHomeDir(), appFolderName, stateFileName)
 	return path, nil
 }
 
