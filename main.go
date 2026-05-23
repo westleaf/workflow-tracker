@@ -46,8 +46,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if conf.CurrentUser == "" {
-		conf.SetUser(user.GetName())
+	if conf.CurrentUser == "" || conf.CurrentUser != user.GetLogin() {
+		conf.SetUser(user.GetLogin())
 	}
 
 	prState, err := config.ReadState()

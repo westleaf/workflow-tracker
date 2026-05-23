@@ -10,6 +10,9 @@ var success []byte
 //go:embed fail.png
 var fail []byte
 
+//go:embed tray.ico
+var trayIcon []byte
+
 func SuccessIcon() []byte {
 	return success
 }
@@ -17,3 +20,5 @@ func SuccessIcon() []byte {
 func FailIcon() []byte {
 	return fail
 }
+
+

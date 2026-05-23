@@ -6,6 +6,7 @@ import (
 
 	"github.com/gen2brain/beeep"
 	"github.com/getlantern/systray"
+	"github.com/westleaf/workflow-tracker/assets"
 )
 
 func runSystray() {
@@ -15,6 +16,9 @@ func runSystray() {
 func onReady() {
 	systray.SetTitle("Workflow notifier")
 	systray.SetTooltip("Workflow notifier")
+	if icon := assets.TrayIcon(); icon != nil {
+		systray.SetIcon(icon)
+	}
 
 	// Show startup notification
 	beeep.AppName = "Workflow notifier"

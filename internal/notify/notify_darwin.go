@@ -10,7 +10,7 @@ type darwinNotifier struct{}
 
 func New() Notifier { return &darwinNotifier{} }
 
-func (n *darwinNotifier) Notify(title, message, url string) error {
+func (n *darwinNotifier) Notify(title, message string, icon []byte, url string) error {
 	cmd := exec.Command("terminal-notifier",
 		"-title", title,
 		"-message", message,

@@ -10,20 +10,22 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gen2brain/beeep"
 	"github.com/google/go-github/v81/github"
 	"github.com/westleaf/workflow-tracker/assets"
 	"github.com/westleaf/workflow-tracker/internal/config"
+	"github.com/westleaf/workflow-tracker/internal/notify"
 	"github.com/westleaf/workflow-tracker/internal/runtime"
 )
 
 type Tracker struct {
-	state *runtime.State
+	state    *runtime.State
+	notifier notify.Notifier
 }
 
 func NewTracker(state *runtime.State) *Tracker {
 	return &Tracker{
-		state: state,
+		state:    state,
+		notifier: notify.New(),
 	}
 }
 
@@ -143,9 +145,10 @@ func (t *Tracker) fetchPRDetails(ctx context.Context, owner, repo string, number
 				prState.WorkflowStatus = workflowRun.GetStatus()
 				prState.WorkflowConclusion = workflowRun.GetConclusion()
 				prState.WorkflowRunID = int(workflowRun.GetID())
+				prState.WorkflowURL = workflowRun.GetHTMLURL()
 			}
 
-			checkShouldNotify(oldState, prState)
+			t.checkShouldNotify(oldState, prState)
 
 			if oldState.WorkflowStatus != prState.WorkflowStatus {
 				return prUpdate{key: key, state: prState, modified: true}, nil
@@ -182,11 +185,12 @@ func (t *Tracker) fetchPRDetails(ctx context.Context, owner, repo string, number
 		prState.WorkflowStatus = workflowRun.GetStatus()
 		prState.WorkflowRunID = int(workflowRun.GetID())
 		prState.WorkflowConclusion = workflowRun.GetConclusion()
+		prState.WorkflowURL = workflowRun.GetHTMLURL()
 	} else {
 		prState.WorkflowStatus = "not_found"
 	}
 
-	checkShouldNotify(oldState, prState)
+	t.checkShouldNotify(oldState, prState)
 
 	prState.Number = number
 	prState.Repo = repo
@@ -202,16 +206,18 @@ func (t *Tracker) fetchPRDetails(ctx context.Context, owner, repo string, number
 	}, nil
 }
 
-func checkShouldNotify(oldState, newState config.PRState) {
+func (t *Tracker) checkShouldNotify(oldState, newState config.PRState) {
 	if oldState.WorkflowStatus != "completed" && newState.WorkflowStatus == "completed" {
 		if newState.WorkflowConclusion == "success" || newState.WorkflowConclusion == "failure" {
-			title := fmt.Sprintf("Pr #%d Workflow Complete", newState.Number)
+			title := fmt.Sprintf("PR #%d Workflow Complete", newState.Number)
 			message := fmt.Sprintf("%s - %s", newState.Repo, newState.WorkflowConclusion)
+			var icon []byte
 			if newState.WorkflowConclusion == "success" {
-				_ = beeep.Notify(title, message, assets.SuccessIcon())
+				icon = assets.SuccessIcon()
 			} else {
-				_ = beeep.Notify(title, message, assets.FailIcon())
+				icon = assets.FailIcon()
 			}
+			_ = t.notifier.Notify(title, message, icon, newState.WorkflowURL)
 		}
 	}
 }

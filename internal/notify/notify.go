@@ -5,9 +5,7 @@ import (
 )
 
 type Notifier interface {
-	Notify(title, message, url string) error
-	// NotifySuccess(title, message, url string) error
-	// NotifyFailure(title, message, url string) error
+	Notify(title string, message string, icon []byte, url string) error
 }
 
 func commandExists(cmd string) bool {
